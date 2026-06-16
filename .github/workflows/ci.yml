@@ -36,9 +36,11 @@ jobs:
         id: build-push
         env:
           IMAGE_URI: {{ECR_REPO_URI}}:${{ github.sha }}
+          IMAGE_LATEST: {{ECR_REPO_URI}}:latest
         run: |
-          docker build -t "$IMAGE_URI" .
+          docker build -t "$IMAGE_URI" -t "$IMAGE_LATEST" .
           docker push "$IMAGE_URI"
+          docker push "$IMAGE_LATEST"
 
       - name: Set image tag output
         id: set-output
