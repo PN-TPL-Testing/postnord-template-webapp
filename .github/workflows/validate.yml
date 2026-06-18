@@ -1,0 +1,33 @@
+name: Validate template
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t postnord-template-webapp:ci .
+
+  notify-portal:
+    name: Notify portal of template update
+    needs: validate
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch to portal
+        env:
+          PORTAL_DISPATCH_PAT: ${{ secrets.PORTAL_DISPATCH_PAT }}
+        run: |
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $PORTAL_DISPATCH_PAT" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/TIQQE/postnord-tpl-app-portal/dispatches \
+            -d "{\"event_type\":\"template-webapp-updated\",\"client_payload\":{\"sha\":\"${{ github.sha }}\"}}"

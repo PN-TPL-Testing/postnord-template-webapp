@@ -48,6 +48,26 @@ tst and prd ECS services start at 0 replicas. To promote:
 2. Select the environment and provide the image tag (git SHA from a successful `ci.yml` run)
 3. Scale the ECS service up to 1 via the portal or AWS console (Phase 2 of the promote workflow will automate this)
 
+## Platform context
+
+This app was provisioned by the [PostNord App Platform](https://github.com/TIQQE/postnord-tpl-app-portal). The platform owns certain constraints that you should not change.
+
+**Do not change:**
+
+- The port the app listens on — ECS and the ALB health check are hardcoded to **8080**
+- The `GET /health` route — ECS polls it and expects HTTP 200
+- The environment names `dev`, `tst`, `prd` — they are baked into ECS service names, Secrets Manager paths, and DNS
+- The `APP_SLUG` and `APP_ENV` environment variable names — the platform uses these to inject context
+
+**You own:**
+
+- Application logic, routes, and dependencies
+- The `Dockerfile` (keep port 8080, non-root user)
+- Runtime secrets — update via Secrets Manager at `/apps/<slug>/<env>/config`; ECS picks them up on next deployment
+- Promotion decisions — tst and prd are always manual
+
+For full platform details see the [portal repo](https://github.com/TIQQE/postnord-tpl-app-portal).
+
 ---
 
 > **Template note:** If you are reading this in the `postnord-template-webapp` repository itself (before the portal has generated an app from it), the `{{APP_SLUG}}` and `<slug>` placeholders above are intentional. `{{APP_SLUG}}` in the heading is replaced during provisioning; the `<slug>` references in the body are plain instructions for the developer who receives the generated repo.
