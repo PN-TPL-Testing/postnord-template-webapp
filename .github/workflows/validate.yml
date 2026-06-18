@@ -7,18 +7,55 @@ on:
     branches: [main]
 
 jobs:
-  validate:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff==0.8.6
+      - run: ruff check .
+      - run: ruff format --check .
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: pytest
+
+  build:
     name: Build Docker image
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Build image
         run: docker build -t postnord-template-webapp:ci .
 
+  smoke-test:
+    name: Docker smoke test
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t postnord-template-webapp:ci .
+      - name: Run container
+        run: docker run -d --name webapp -p 8080:8080 postnord-template-webapp:ci
+      - name: Wait for startup
+        run: sleep 3
+      - name: Health check
+        run: curl -fsS http://localhost:8080/app-dev/health
+
   notify-portal:
     name: Notify portal of template update
-    needs: validate
+    needs: [lint, test, smoke-test]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
