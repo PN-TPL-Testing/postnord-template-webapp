@@ -1,111 +1,76 @@
 import os
+from pathlib import Path
 
 from fastapi import FastAPI, APIRouter
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 APP_SLUG = os.environ.get("APP_SLUG", "app")
 APP_ENV = os.environ.get("APP_ENV", "dev")
 PREFIX = f"/{APP_SLUG}-{APP_ENV}"
 
+# Static files are the compiled React build (frontend/). In the Docker image the
+# Dockerfile copies the Vite output here. Locally, run `cd frontend && npm run build`
+# to populate this directory. The Python tests run without a build present — the
+# app falls back to a minimal HTML page in that case.
+STATIC_DIR = Path(__file__).parent / "static"
+
 app = FastAPI()
 router = APIRouter(prefix=PREFIX)
 
-_ENV_COLOURS = {"dev": "#2563eb", "tst": "#d97706", "prd": "#16a34a"}
-_ENV_COLOUR = _ENV_COLOURS.get(APP_ENV, "#6b7280")
-
-_PAGE = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{APP_SLUG}</title>
-  <style>
-    *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
-    body {{
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #0f172a;
-      color: #f1f5f9;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }}
-    .card {{
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 16px;
-      padding: 48px 56px;
-      text-align: center;
-      max-width: 480px;
-      width: 90%;
-    }}
-    .badge {{
-      display: inline-block;
-      background: {_ENV_COLOUR}22;
-      color: {_ENV_COLOUR};
-      border: 1px solid {_ENV_COLOUR}55;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      padding: 4px 14px;
-      margin-bottom: 24px;
-    }}
-    h1 {{
-      font-size: 2rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 12px;
-    }}
-    p {{
-      color: #94a3b8;
-      font-size: 0.95rem;
-      line-height: 1.6;
-    }}
-    .dot {{
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #22c55e;
-      margin-right: 6px;
-      animation: pulse 2s infinite;
-    }}
-    .status {{
-      margin-top: 32px;
-      font-size: 0.85rem;
-      color: #64748b;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-    }}
-    @keyframes pulse {{
-      0%, 100% {{ opacity: 1; }}
-      50% {{ opacity: 0.4; }}
-    }}
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="badge">{APP_ENV}</div>
-    <h1>{APP_SLUG}</h1>
-    <p>Your application is up and running on the PostNord App Platform.</p>
-    <div class="status"><span class="dot"></span> Healthy</div>
-  </div>
-</body>
-</html>"""
+# Inject runtime config into index.html once at startup. APP_SLUG and APP_ENV are
+# set by the ECS task definition for each provisioned app — see the portal's
+# ecs_backend.py. In this template they default to "app" / "dev" so local
+# development works without setting env vars.
+_CONFIG_SCRIPT = (
+    "<script>"
+    f'window.__APP_CONFIG__={{slug:"{APP_SLUG}",env:"{APP_ENV}",prefix:"{PREFIX}"}};'
+    "</script>"
+)
 
 
-@router.get("/", response_class=HTMLResponse)
-def root():
-    return _PAGE
+def _build_spa_html() -> str:
+    index_path = STATIC_DIR / "index.html"
+    if not index_path.exists():
+        # Fallback served when the React build is absent (e.g. running pytest
+        # without having run `npm run build` first). The slug and env are
+        # included so existing tests that assert on those strings still pass.
+        return (
+            '<!DOCTYPE html><html lang="en"><head>'
+            f"<title>{APP_SLUG}</title></head><body>"
+            f"<p>App: {APP_SLUG} | Env: {APP_ENV}</p>"
+            "<p>Frontend not built — run: cd frontend &amp;&amp; npm run build</p>"
+            "</body></html>"
+        )
+    html = index_path.read_text()
+    # Inject the config script so React can read window.__APP_CONFIG__ at runtime.
+    return html.replace("</head>", f"{_CONFIG_SCRIPT}</head>", 1)
+
+
+# Cache the injected HTML — config is fixed for the lifetime of this container.
+_SPA_HTML: str = _build_spa_html()
 
 
 @router.get("/health")
 def health():
     return {"status": "ok"}
 
+
+# Catch-all: serve the React SPA for every route under the prefix.
+# React Router (with basename=PREFIX) handles client-side navigation from here.
+@router.get("/")
+@router.get("/{path:path}")
+def spa(path: str = ""):
+    return HTMLResponse(_SPA_HTML)
+
+
+# Serve compiled JS/CSS bundles. Only mounted when the build is present so the
+# app starts cleanly in test environments too.
+if (STATIC_DIR / "assets").exists():
+    app.mount(
+        f"{PREFIX}/assets",
+        StaticFiles(directory=str(STATIC_DIR / "assets")),
+        name="static",
+    )
 
 app.include_router(router)
