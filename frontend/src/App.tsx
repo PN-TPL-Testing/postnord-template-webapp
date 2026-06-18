@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useIsAuthenticated, useMsal } from '@azure/msal-react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
@@ -17,8 +18,18 @@ const config: AppConfig = window.__APP_CONFIG__ ?? {
 }
 
 export default function App() {
-  const isAuthenticated = useIsAuthenticated()
+  const msalAuthenticated = useIsAuthenticated()
+  const [localAuthenticated, setLocalAuthenticated] = useState(false)
+  const isAuthenticated = msalAuthenticated || localAuthenticated
   const { instance } = useMsal()
+
+  const handleLogout = () => {
+    if (config.entraClientId) {
+      instance.logoutRedirect()
+    } else {
+      setLocalAuthenticated(false)
+    }
+  }
 
   return (
     <BrowserRouter basename={config.prefix}>
@@ -29,7 +40,7 @@ export default function App() {
             isAuthenticated ? (
               <Navigate to="/guide" replace />
             ) : (
-              <LoginPage config={config} />
+              <LoginPage config={config} onLogin={() => setLocalAuthenticated(true)} />
             )
           }
         />
@@ -37,7 +48,7 @@ export default function App() {
           path="/guide"
           element={
             isAuthenticated ? (
-              <VibeCodingGuidePage config={config} onLogout={() => instance.logoutRedirect()} />
+              <VibeCodingGuidePage config={config} onLogout={handleLogout} />
             ) : (
               <Navigate to="/" replace />
             )
