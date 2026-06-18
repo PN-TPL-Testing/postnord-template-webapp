@@ -1,22 +1,9 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
+import { useMsal } from '@azure/msal-react'
 
 interface Props {
   config: AppConfig
-  onLogin: () => void
 }
-
-// TEMPLATE: This login page ships in every provisioned PostNord platform app.
-// Currently it accepts any non-empty credentials as a demo so developers can
-// explore the app shell immediately after provisioning.
-//
-// To connect real authentication, replace the handleSubmit body with a call
-// to the platform's auth service — for example:
-//   await Auth.signIn(email, password)   // AWS Amplify Cognito
-//   or a POST to /auth/token on your own auth endpoint.
-//
-// The SSO button below mirrors the portal login pattern. In a real app it would
-// redirect to the PostNord identity provider OIDC endpoint. The portal provisions
-// an OIDC client ID per app slug that you can use here.
 
 const ENV_COLOURS: Record<string, string> = {
   dev: '#2563eb',
@@ -24,32 +11,20 @@ const ENV_COLOURS: Record<string, string> = {
   prd: '#16a34a',
 }
 
-export default function LoginPage({ config, onLogin }: Props) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+const LOGIN_REQUEST = { scopes: ['openid', 'profile', 'email'] }
 
+export default function LoginPage({ config }: Props) {
+  const { instance } = useMsal()
   const envColour = ENV_COLOURS[config.env] ?? '#6b7280'
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!email || !password) {
-      setError('Please enter your email and password.')
-      return
-    }
-    // TEMPLATE: Accepts any credentials. Replace with a real auth call.
-    // In a real app provisioned on this platform each slug gets its own
-    // Cognito user pool — the connection details come in via Secrets Manager
-    // at /apps/<slug>/<env>/config, injected as env vars by the ECS task.
-    onLogin()
-  }
+  useEffect(() => {
+    instance.loginRedirect(LOGIN_REQUEST)
+  }, [instance])
 
   return (
     <div style={s.page}>
       <div style={s.card}>
         <header style={s.header}>
-          {/* The env badge and slug update automatically per provisioned app
-              because APP_SLUG / APP_ENV are set by the ECS task definition. */}
           <span
             style={{
               ...s.envBadge,
@@ -63,58 +38,7 @@ export default function LoginPage({ config, onLogin }: Props) {
           <h1 style={s.appName}>{config.slug}</h1>
           <p style={s.platform}>PostNord App Platform</p>
         </header>
-
-        <form onSubmit={handleSubmit} style={s.form} noValidate>
-          <div style={s.field}>
-            <label htmlFor="email" style={s.label}>
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@postnord.com"
-              style={s.input}
-              autoComplete="email"
-            />
-          </div>
-          <div style={s.field}>
-            <label htmlFor="password" style={s.label}>
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              style={s.input}
-              autoComplete="current-password"
-            />
-          </div>
-
-          {error && <p style={s.error}>{error}</p>}
-
-          <button type="submit" style={s.submitBtn}>
-            Sign in
-          </button>
-        </form>
-
-        <div style={s.dividerRow}>
-          <span style={s.dividerLine} />
-          <span style={s.dividerText}>or</span>
-          <span style={s.dividerLine} />
-        </div>
-
-        {/* TEMPLATE: This SSO button is a placeholder that bypasses the form.
-            In a real app, replace onClick with a redirect to the PostNord
-            identity provider, e.g.:
-              window.location.href = `${authDomain}/oauth2/authorize?...`
-            The portal can supply the OIDC endpoint URL as an env var. */}
-        <button type="button" style={s.ssoBtn} onClick={onLogin}>
-          Continue with PostNord SSO
-        </button>
+        <p style={s.signingIn}>Signing in with Microsoft...</p>
       </div>
     </div>
   )
@@ -141,7 +65,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   header: {
     textAlign: 'center',
-    marginBottom: '36px',
+    marginBottom: '24px',
   },
   envBadge: {
     display: 'inline-block',
@@ -165,71 +89,10 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: '0.875rem',
     margin: 0,
   },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-  },
-  field: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px',
-  },
-  label: {
+  signingIn: {
+    color: '#64748b',
     fontSize: '0.875rem',
-    fontWeight: 500,
-    color: '#94a3b8',
-  },
-  input: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '8px',
-    color: '#f1f5f9',
-    fontSize: '0.95rem',
-    padding: '10px 14px',
-    outline: 'none',
-    width: '100%',
-  },
-  error: {
-    color: '#f87171',
-    fontSize: '0.85rem',
+    textAlign: 'center',
     margin: 0,
-  },
-  submitBtn: {
-    background: '#2563eb',
-    border: 'none',
-    borderRadius: '8px',
-    color: '#fff',
-    cursor: 'pointer',
-    fontSize: '0.95rem',
-    fontWeight: 600,
-    marginTop: '4px',
-    padding: '12px',
-    width: '100%',
-  },
-  dividerRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    margin: '24px 0',
-  },
-  dividerLine: {
-    flex: 1,
-    height: '1px',
-    background: '#334155',
-  },
-  dividerText: {
-    color: '#475569',
-    fontSize: '0.8rem',
-  },
-  ssoBtn: {
-    background: 'transparent',
-    border: '1px solid #334155',
-    borderRadius: '8px',
-    color: '#94a3b8',
-    cursor: 'pointer',
-    fontSize: '0.9rem',
-    padding: '11px',
-    width: '100%',
   },
 }
