@@ -8,6 +8,8 @@ from fastapi.staticfiles import StaticFiles
 APP_SLUG = os.environ.get("APP_SLUG", "app")
 APP_ENV = os.environ.get("APP_ENV", "dev")
 PREFIX = f"/{APP_SLUG}-{APP_ENV}"
+ENTRA_CLIENT_ID = os.environ.get("ENTRA_CLIENT_ID", "")
+ENTRA_TENANT_ID = os.environ.get("ENTRA_TENANT_ID", "")
 
 # Static files are the compiled React build (frontend/). In the Docker image the
 # Dockerfile copies the Vite output here. Locally, run `cd frontend && npm run build`
@@ -24,7 +26,8 @@ router = APIRouter(prefix=PREFIX)
 # development works without setting env vars.
 _CONFIG_SCRIPT = (
     "<script>"
-    f'window.__APP_CONFIG__={{slug:"{APP_SLUG}",env:"{APP_ENV}",prefix:"{PREFIX}"}};'
+    f'window.__APP_CONFIG__={{slug:"{APP_SLUG}",env:"{APP_ENV}",prefix:"{PREFIX}"'
+    f',entraClientId:"{ENTRA_CLIENT_ID}",entraTenantId:"{ENTRA_TENANT_ID}"}};'
     "</script>"
 )
 

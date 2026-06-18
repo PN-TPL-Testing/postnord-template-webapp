@@ -8,6 +8,8 @@ interface AppConfig {
   slug: string
   env: string
   prefix: string
+  entraClientId: string
+  entraTenantId: string
 }
 
 interface Window {

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useIsAuthenticated, useMsal } from '@azure/msal-react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import VibeCodingGuidePage from './pages/VibeCodingGuidePage'
@@ -12,14 +12,13 @@ const config: AppConfig = window.__APP_CONFIG__ ?? {
   slug: 'app',
   env: 'dev',
   prefix: '/app-dev',
+  entraClientId: '',
+  entraTenantId: '',
 }
 
 export default function App() {
-  // TEMPLATE: This is simple React state — not persisted across page loads.
-  // In a real provisioned app, replace this with a proper auth session:
-  // e.g. AWS Amplify's Auth.signIn(), a JWT stored in memory, or an
-  // HttpOnly cookie set by the platform's auth service.
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const isAuthenticated = useIsAuthenticated()
+  const { instance } = useMsal()
 
   return (
     <BrowserRouter basename={config.prefix}>
@@ -30,7 +29,7 @@ export default function App() {
             isAuthenticated ? (
               <Navigate to="/guide" replace />
             ) : (
-              <LoginPage config={config} onLogin={() => setIsAuthenticated(true)} />
+              <LoginPage config={config} />
             )
           }
         />
@@ -38,7 +37,7 @@ export default function App() {
           path="/guide"
           element={
             isAuthenticated ? (
-              <VibeCodingGuidePage config={config} onLogout={() => setIsAuthenticated(false)} />
+              <VibeCodingGuidePage config={config} onLogout={() => instance.logoutRedirect()} />
             ) : (
               <Navigate to="/" replace />
             )
