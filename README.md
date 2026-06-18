@@ -29,10 +29,12 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8080
 ```
 
+Routes are prefixed with `/<APP_SLUG>-<APP_ENV>` (defaults to `/app-dev` when env vars are not set):
+
 | Route | Response |
 |-------|----------|
-| `GET /` | `{"message": "Hello from <slug>!", "env": "dev"}` |
-| `GET /health` | `{"status": "ok"}` |
+| `GET /<slug>-<env>/` | HTML status page |
+| `GET /<slug>-<env>/health` | `{"status": "ok"}` |
 
 `APP_SLUG` and `APP_ENV` are read from environment variables and default to `"app"` and `"dev"` if not set.
 
@@ -55,7 +57,7 @@ This app was provisioned by the [PostNord App Platform](https://github.com/TIQQE
 **Do not change:**
 
 - The port the app listens on — ECS and the ALB health check are hardcoded to **8080**
-- The `GET /health` route — ECS polls it and expects HTTP 200
+- The `GET /<slug>-<env>/health` route — ECS polls it and expects HTTP 200
 - The environment names `dev`, `tst`, `prd` — they are baked into ECS service names, Secrets Manager paths, and DNS
 - The `APP_SLUG` and `APP_ENV` environment variable names — the platform uses these to inject context
 
