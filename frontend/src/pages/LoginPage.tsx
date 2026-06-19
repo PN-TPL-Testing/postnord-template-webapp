@@ -1,15 +1,10 @@
 import { useEffect } from 'react'
 import { useMsal } from '@azure/msal-react'
+import { theme, ENV_COLOURS } from '../theme'
 
 interface Props {
   config: AppConfig
   onLogin: () => void
-}
-
-const ENV_COLOURS: Record<string, string> = {
-  dev: '#2563eb',
-  tst: '#d97706',
-  prd: '#16a34a',
 }
 
 const LOGIN_REQUEST = { scopes: ['openid', 'profile', 'email'] }
@@ -52,8 +47,8 @@ export default function LoginPage({ config, onLogin }: Props) {
 const s: Record<string, React.CSSProperties> = {
   page: {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    background: '#0f172a',
-    color: '#f1f5f9',
+    background: theme.bgPage,
+    color: theme.textPrimary,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -61,8 +56,9 @@ const s: Record<string, React.CSSProperties> = {
     padding: '16px',
   },
   card: {
-    background: '#1e293b',
-    border: '1px solid #334155',
+    background: theme.bgCard,
+    border: `1px solid ${theme.border}`,
+    boxShadow: '0 4px 24px rgba(0,0,0,0.07)',
     borderRadius: '16px',
     padding: '48px 52px',
     width: '100%',
@@ -90,12 +86,12 @@ const s: Record<string, React.CSSProperties> = {
     margin: '0 0 8px',
   },
   platform: {
-    color: '#64748b',
+    color: theme.textSecondary,
     fontSize: '0.875rem',
     margin: 0,
   },
   signingIn: {
-    color: '#64748b',
+    color: theme.textSecondary,
     fontSize: '0.875rem',
     textAlign: 'center',
     margin: 0,
