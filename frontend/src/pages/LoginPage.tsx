@@ -3,6 +3,7 @@ import { useMsal } from '@azure/msal-react'
 
 interface Props {
   config: AppConfig
+  onLogin: () => void
 }
 
 const ENV_COLOURS: Record<string, string> = {
@@ -13,13 +14,17 @@ const ENV_COLOURS: Record<string, string> = {
 
 const LOGIN_REQUEST = { scopes: ['openid', 'profile', 'email'] }
 
-export default function LoginPage({ config }: Props) {
+export default function LoginPage({ config, onLogin }: Props) {
   const { instance } = useMsal()
   const envColour = ENV_COLOURS[config.env] ?? '#6b7280'
 
   useEffect(() => {
-    instance.loginRedirect(LOGIN_REQUEST)
-  }, [instance])
+    if (config.entraClientId) {
+      instance.loginRedirect(LOGIN_REQUEST)
+    } else {
+      onLogin()
+    }
+  }, [instance, config.entraClientId, onLogin])
 
   return (
     <div style={s.page}>
