@@ -1,27 +1,23 @@
 // TEMPLATE: This guide page ships with every provisioned PostNord platform app.
 // Replace or extend it with your own app content once you're up and running.
 
+import { theme, ENV_COLOURS } from '../theme'
+
 interface Props {
   config: AppConfig
   onLogout: () => void
 }
 
-const ENV_COLOURS: Record<string, string> = {
-  dev: '#2563eb',
-  tst: '#d97706',
-  prd: '#16a34a',
-}
-
 const s: Record<string, React.CSSProperties> = {
   page: {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    background: '#0f172a',
-    color: '#f1f5f9',
+    background: theme.bgPage,
+    color: theme.textPrimary,
     minHeight: '100vh',
   },
   nav: {
-    background: '#1e293b',
-    borderBottom: '1px solid #334155',
+    background: theme.bgNav,
+    borderBottom: 'none',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -44,12 +40,13 @@ const s: Record<string, React.CSSProperties> = {
   appName: {
     fontWeight: 600,
     fontSize: '0.95rem',
+    color: theme.textOnDark,
   },
   logoutBtn: {
     background: 'transparent',
-    border: '1px solid #334155',
+    border: `1px solid ${theme.whiteTint30}`,
     borderRadius: '6px',
-    color: '#94a3b8',
+    color: theme.whiteTint80,
     cursor: 'pointer',
     fontSize: '0.85rem',
     padding: '6px 14px',
@@ -62,19 +59,19 @@ const s: Record<string, React.CSSProperties> = {
   hero: {
     marginBottom: '32px',
     paddingBottom: '32px',
-    borderBottom: '1px solid #1e293b',
+    borderBottom: `1px solid ${theme.border}`,
   },
   heroTitle: {
     fontSize: '2.25rem',
     fontWeight: 700,
     letterSpacing: '-0.03em',
     marginBottom: '10px',
-    background: 'linear-gradient(90deg, #f1f5f9 0%, #94a3b8 100%)',
+    background: `linear-gradient(90deg, ${theme.blueNavy} 0%, ${theme.bluePrimary} 100%)`,
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
   },
   heroSub: {
-    color: '#94a3b8',
+    color: theme.textSecondary,
     fontSize: '1rem',
     margin: 0,
   },
@@ -82,13 +79,13 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'flex-start',
     gap: '12px',
-    background: 'rgba(69, 26, 3, 0.2)',
-    border: '1px solid rgba(146, 64, 14, 0.4)',
-    borderLeft: '3px solid #f59e0b',
+    background: theme.orangeTint08,
+    border: `1px solid ${theme.orangeTint40}`,
+    borderLeft: `3px solid ${theme.orange}`,
     borderRadius: '8px',
     padding: '14px 18px',
     marginBottom: '32px',
-    color: '#fcd34d',
+    color: theme.textPrimary,
     fontSize: '0.875rem',
     lineHeight: '1.6',
   },
@@ -103,8 +100,8 @@ const s: Record<string, React.CSSProperties> = {
     gap: '20px',
   },
   card: {
-    background: '#1e293b',
-    border: '1px solid #334155',
+    background: theme.bgCard,
+    border: `1px solid ${theme.border}`,
     borderRadius: '12px',
     padding: '24px 28px',
   },
@@ -132,25 +129,25 @@ const s: Record<string, React.CSSProperties> = {
   cardBody: {
     fontSize: '0.875rem',
     lineHeight: '1.7',
-    color: '#94a3b8',
+    color: theme.textSecondary,
   },
   p: {
     margin: '0 0 12px',
-    color: '#94a3b8',
+    color: theme.textSecondary,
     lineHeight: '1.7',
   },
   ul: {
     margin: '0 0 12px',
     paddingLeft: '20px',
-    color: '#94a3b8',
+    color: theme.textSecondary,
     lineHeight: '1.8',
   },
   li: {
     marginBottom: '4px',
   },
   pre: {
-    background: '#0f172a',
-    border: '1px solid #334155',
+    background: theme.bgCode,
+    border: `1px solid ${theme.borderCode}`,
     borderRadius: '8px',
     padding: '12px 14px',
     margin: '0 0 12px',
@@ -158,24 +155,24 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: '0.8rem',
     lineHeight: '1.6',
     fontFamily: '"SF Mono", "Fira Code", "Cascadia Code", monospace',
-    color: '#e2e8f0',
+    color: theme.textPrimary,
     whiteSpace: 'pre',
   },
   inlineCode: {
-    background: '#0f172a',
-    border: '1px solid #334155',
+    background: theme.bgCode,
+    border: `1px solid ${theme.borderCode}`,
     borderRadius: '4px',
     padding: '1px 6px',
     fontSize: '0.8em',
     fontFamily: '"SF Mono", "Fira Code", "Cascadia Code", monospace',
-    color: '#e2e8f0',
+    color: theme.textPrimary,
   },
   footer: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
     marginTop: '48px',
-    color: '#475569',
+    color: theme.textSecondary,
     fontSize: '0.8rem',
   },
   dot: {
@@ -183,7 +180,7 @@ const s: Record<string, React.CSSProperties> = {
     width: '7px',
     height: '7px',
     borderRadius: '50%',
-    background: '#22c55e',
+    background: theme.statusHealthy,
   },
 }
 
@@ -348,7 +345,7 @@ const SECTIONS: Section[] = [
 ]
 
 export default function VibeCodingGuidePage({ config, onLogout }: Props) {
-  const envColour = ENV_COLOURS[config.env] ?? '#6b7280'
+  const envColour = ENV_COLOURS[config.env] ?? theme.envUnknown
 
   return (
     <div style={s.page}>
