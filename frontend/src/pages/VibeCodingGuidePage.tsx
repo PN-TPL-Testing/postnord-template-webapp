@@ -326,26 +326,22 @@ const SECTIONS: Section[] = [
     ),
   },
   {
-    title: 'Running locally',
-    icon: '💻',
+    title: 'Just push to main',
+    icon: '🔄',
     body: (
       <>
-        <p style={s.p}>Backend (FastAPI, hot-reload):</p>
-        <pre style={s.pre}><code>uvicorn app.main:app --reload --port 8080</code></pre>
-
-        <p style={s.p}>Frontend (React, hot-reload):</p>
-        <pre style={s.pre}><code>cd frontend && npm install && npm run dev</code></pre>
-
         <p style={s.p}>
-          Full production build (React → <code style={s.inlineCode}>app/static/</code>, served
-          by FastAPI):
+          You don't need to think about running this app. The platform handles it: every push to{' '}
+          <code style={s.inlineCode}>main</code> triggers a CI build, packages your app into a
+          Docker image, and deploys it to the dev environment automatically. Promoting to tst or
+          prd is a single click in GitHub Actions. There's no server to manage, no container to
+          run locally, no infrastructure to configure.
         </p>
-        <pre style={s.pre}><code>{`cd frontend && npm run build\nuvicorn app.main:app --port 8080`}</code></pre>
-
-        <p style={s.p}>Docker (mirrors the ECS environment exactly):</p>
-        <pre style={{ ...s.pre, marginBottom: 0 }}>
-          <code>{`docker build -t my-app . \\\n  && docker run -p 8080:8080 \\\n       -e APP_SLUG=my-app \\\n       -e APP_ENV=dev \\\n       my-app`}</code>
-        </pre>
+        <p style={{ ...s.p, marginBottom: 0 }}>
+          The right workflow with a provisioned app like this is: describe the change you want to
+          Claude Code, review the diff, commit, and push. Let the platform do the rest. Your job
+          is to steer the product — not operate the infrastructure.
+        </p>
       </>
     ),
   },
