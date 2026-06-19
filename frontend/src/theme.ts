@@ -26,6 +26,15 @@ export const theme = {
   envTst: '#d97706',
   envPrd: '#16a34a',
 
+  // Alpha tints (used where full opacity isn't appropriate)
+  orangeTint08: 'rgba(248, 145, 66, 0.08)',
+  orangeTint40: 'rgba(248, 145, 66, 0.40)',
+  whiteTint30:  'rgba(255, 255, 255, 0.30)',
+  whiteTint80:  'rgba(255, 255, 255, 0.80)',
+
+  // Env badge fallback for unrecognised environments
+  envUnknown: '#6b7280',
+
   // Status
   statusHealthy: '#22c55e',
 } as const

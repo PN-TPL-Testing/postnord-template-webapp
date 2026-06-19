@@ -44,9 +44,9 @@ const s: Record<string, React.CSSProperties> = {
   },
   logoutBtn: {
     background: 'transparent',
-    border: '1px solid rgba(255,255,255,0.3)',
+    border: `1px solid ${theme.whiteTint30}`,
     borderRadius: '6px',
-    color: 'rgba(255,255,255,0.8)',
+    color: theme.whiteTint80,
     cursor: 'pointer',
     fontSize: '0.85rem',
     padding: '6px 14px',
@@ -79,8 +79,8 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'flex-start',
     gap: '12px',
-    background: 'rgba(248, 145, 66, 0.08)',
-    border: `1px solid rgba(248, 145, 66, 0.4)`,
+    background: theme.orangeTint08,
+    border: `1px solid ${theme.orangeTint40}`,
     borderLeft: `3px solid ${theme.orange}`,
     borderRadius: '8px',
     padding: '14px 18px',
@@ -345,7 +345,7 @@ const SECTIONS: Section[] = [
 ]
 
 export default function VibeCodingGuidePage({ config, onLogout }: Props) {
-  const envColour = ENV_COLOURS[config.env] ?? '#6b7280'
+  const envColour = ENV_COLOURS[config.env] ?? theme.envUnknown
 
   return (
     <div style={s.page}>

@@ -11,7 +11,7 @@ const LOGIN_REQUEST = { scopes: ['openid', 'profile', 'email'] }
 
 export default function LoginPage({ config, onLogin }: Props) {
   const { instance } = useMsal()
-  const envColour = ENV_COLOURS[config.env] ?? '#6b7280'
+  const envColour = ENV_COLOURS[config.env] ?? theme.envUnknown
 
   useEffect(() => {
     if (config.entraClientId) {
