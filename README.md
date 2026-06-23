@@ -22,6 +22,13 @@ Apps are routed by path prefix on the shared ALB (`postnord-tpl-alb`) in `eu-nor
 
 Every push to `main` automatically builds and deploys to dev. Promotion to tst and prd is always manual.
 
+## Project layout
+
+This app has two parts:
+
+- **Backend** — FastAPI (`app/main.py`), serves the API and the compiled frontend.
+- **Frontend** — a React + TypeScript single-page app (`frontend/`) built with Vite, using Azure MSAL for auth. `npm run build` compiles it into `app/static/`, which FastAPI then serves.
+
 ## Running locally
 
 Build the React frontend first (required for the SPA to serve correctly):
@@ -84,7 +91,8 @@ This app was provisioned by the [PostNord App Platform](https://github.com/TIQQE
 
 **You own:**
 
-- Application logic, routes, and dependencies
+- Application logic, routes, and dependencies (`app/`, `requirements.txt`)
+- The React frontend (`frontend/`) — it compiles to `app/static/` and is served by FastAPI
 - The `Dockerfile` (keep port 8080, non-root user)
 - Runtime secrets — update via Secrets Manager at `/apps/<slug>/<env>/config`; ECS picks them up on next deployment
 - Promotion decisions — tst and prd are always manual
