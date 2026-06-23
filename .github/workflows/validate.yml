@@ -35,8 +35,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
       - name: Build image
-        run: docker build -t postnord-template-webapp:ci .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: postnord-template-webapp:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   smoke-test:
     name: Docker smoke test
@@ -44,8 +51,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
       - name: Build image
-        run: docker build -t postnord-template-webapp:ci .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: postnord-template-webapp:ci
+          # Reuses the layers cached by the `build` job above, so this is a
+          # cache hit rather than a second full rebuild.
+          cache-from: type=gha
       - name: Run container
         run: docker run -d --name webapp -p 8080:8080 postnord-template-webapp:ci
       - name: Wait for startup

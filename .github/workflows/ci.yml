@@ -32,15 +32,23 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push image
         id: build-push
-        env:
-          IMAGE_URI: {{ECR_REPO_URI}}:${{ github.sha }}
-          IMAGE_LATEST: {{ECR_REPO_URI}}:latest
-        run: |
-          docker build -t "$IMAGE_URI" -t "$IMAGE_LATEST" .
-          docker push "$IMAGE_URI"
-          docker push "$IMAGE_LATEST"
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            {{ECR_REPO_URI}}:${{ github.sha }}
+            {{ECR_REPO_URI}}:latest
+          # Persist the layer cache in the GitHub Actions cache so the next
+          # build only redoes layers whose inputs changed (npm ci, vite build
+          # and pip install are skipped when their inputs are unchanged).
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Set image tag output
         id: set-output

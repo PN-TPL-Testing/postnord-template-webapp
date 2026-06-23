@@ -37,9 +37,19 @@ These constraints originate from the platform. Changes that break them will brea
 - **Secrets**: Runtime secrets live in Secrets Manager at `/apps/<slug>/<env>/config`. The ECS task role for each environment has read-only access to its own path only.
 - **IAM boundary**: All task roles operate under a permissions boundary. Do not assume broader AWS access.
 
+## Application structure
+
+The app is a FastAPI backend that serves a compiled React frontend:
+
+- **Backend** — `app/main.py` (FastAPI). Serves the API and the static frontend bundle.
+- **Frontend** — `frontend/` is a React + TypeScript SPA built with Vite, using Azure MSAL (`@azure/msal-browser`, `@azure/msal-react`) for auth. `npm run build` compiles it to `app/static/` (set via `outDir` in `frontend/vite.config.ts`), which FastAPI serves.
+
+The `Dockerfile` is a multi-stage build: a `node:20-slim` stage runs `npm ci` + `npm run build`, a `python:3.12-slim` stage installs Python deps, and the runtime stage copies both in. The frontend stage (`npm ci` over ~120 packages, then the Vite build) dominates build time — keep this in mind when changing frontend dependencies. CI uses GitHub Actions layer caching (`cache-from`/`cache-to: type=gha`) so unchanged layers are not rebuilt.
+
 ## What you can safely change
 
 - Application logic (`app/main.py`), additional routes, new Python dependencies (`requirements.txt`)
+- The React frontend (`frontend/`) — components, routes, and npm dependencies. It must still build to `app/static/`.
 - The `Dockerfile`, as long as the image exposes port 8080 and runs as a non-root user
 - Additional environment variables read at runtime (document them in the README)
 
@@ -48,7 +58,10 @@ These constraints originate from the platform. Changes that break them will brea
 The workflows `ci.yml`, `deploy.yml`, and `promote.yml` are **templates for provisioned apps** — they contain unresolved `{{...}}` tokens and are not meant to run here directly.
 
 `validate.yml` is specific to this template repo. It:
-- Builds the Docker image on every PR to `main` (validates the template is buildable)
+- Lints and tests the Python code
+- Builds the Docker image on every PR to `main` (validates the template is buildable) and runs a container smoke test against `/health`
 - On merge to `main`, fires a `repository_dispatch` event to `TIQQE/postnord-tpl-app-portal` so the portal can react to template changes
+
+Both `ci.yml` and `validate.yml` build via `docker/build-push-action` with Buildx and GitHub Actions layer caching (`type=gha`). On a cold cache (e.g. the first build of a freshly provisioned app) the full frontend `npm ci` + Vite build runs; subsequent builds reuse cached layers and are much faster.
 
 The dispatch requires a secret `PORTAL_DISPATCH_PAT` — a classic GitHub PAT with `repo` scope on the portal repo, stored in this repo's secrets by someone who is a member of both `PN-TPL-Testing` and `TIQQE`.
