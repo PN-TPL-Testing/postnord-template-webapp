@@ -19,9 +19,9 @@ The portal runs an 11-step pipeline when a new app is created:
 | 5–6 | IAM task roles and OIDC GitHub deploy role (`app-<slug>-github-deploy`) |
 | 7 | ECS task definitions for dev/tst/prd (256 CPU / 512 MB) |
 | 8 | ECS services, ALB routing rules, Route 53 CNAMEs |
-| 9 | Repository collaborator access |
+| 9 | Repository collaborator access (currently skipped — not enabled in this environment) |
 | 10 | Triggers the first CI build on the provisioned repo |
-| 11 | Waits for the app to go live at `http://<slug>-dev.apps-tpl.internal` |
+| 11 | Waits for the app to go live at `http://postnord-tpl-alb-1832331524.eu-north-1.elb.amazonaws.com/<slug>-dev/` |
 
 All provisioning logic lives in `portal/app/provisioning/ecs_backend.py` in the portal repo.
 
@@ -30,7 +30,7 @@ All provisioning logic lives in `portal/app/provisioning/ecs_backend.py` in the 
 These constraints originate from the platform. Changes that break them will break provisioned apps.
 
 - **Port 8080**: ECS task definitions and ALB health checks are hardcoded to port 8080. The app must listen on this port.
-- **`/health` route**: ECS polls `GET /health`. It must return HTTP 200.
+- **`/<slug>-<env>/health` route**: The ALB target group health checks `GET /<slug>-<env>/health`. It must return HTTP 200. The route is registered under the `PREFIX` router in `main.py` — do not change the path or remove the route.
 - **Environment names**: `dev`, `tst`, `prd` — these appear in ECS service names, Secrets Manager paths, and DNS records. Do not add or rename environments.
 - **`{{...}}` tokens**: `.github/workflows/ci.yml`, `deploy.yml`, and `promote.yml` contain tokens such as `{{GITHUB_DEPLOY_ROLE_ARN}}`, `{{AWS_REGION}}`, `{{ECR_REPO_URI}}`, `{{ECS_CLUSTER}}`, and `{{ECS_SERVICE_DEV}}`. **Do not remove or rename these** — the portal replaces them at provision time.
 - **`APP_SLUG` and `APP_ENV` env vars**: Used by the portal to inject the app's identity at runtime. Keep these variable names.
@@ -49,9 +49,9 @@ The `Dockerfile` is a multi-stage build: a `node:20-slim` stage runs `npm ci` + 
 ## What you can safely change
 
 - Application logic (`app/main.py`), additional routes, new Python dependencies (`requirements.txt`)
-- The React frontend (`frontend/`) — components, routes, and npm dependencies. It must still build to `app/static/`.
+- Frontend code (`frontend/`) — React components, routes, styles, npm dependencies (`package.json`). The Dockerfile's `frontend-builder` stage (node:20-slim) compiles the Vite app into `app/static/` at image build time.
 - The `Dockerfile`, as long as the image exposes port 8080 and runs as a non-root user
-- Additional environment variables read at runtime (document them in the README)
+- Additional environment variables read at runtime — document them in the README. The platform-managed vars are `APP_SLUG`, `APP_ENV`, and `APP_PORT`. App-level vars currently used: `ENTRA_CLIENT_ID` and `ENTRA_TENANT_ID` (Azure AD / MSAL auth, injected from Secrets Manager).
 
 ## CI in this repo
 
