@@ -45,7 +45,7 @@ jobs:
             --region "$AWS_REGION" \
             --query 'taskDefinition' \
             --output json | jq --arg IMAGE "$IMAGE_URI" \
-            'del(.taskDefinitionArn,.revision,.status,.requiresAttributes,.compatibilities,.registeredAt,.registeredBy)
+            'del(.taskDefinitionArn,.revision,.status,.requiresAttributes,.compatibilities,.registeredAt,.registeredBy,.deregisteredAt)
              | .containerDefinitions[0].image = $IMAGE')
 
           NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
@@ -66,7 +66,35 @@ jobs:
           SERVICE: {{ECS_SERVICE_DEV}}
           AWS_REGION: {{AWS_REGION}}
         run: |
-          aws ecs wait services-stable \
-            --cluster "$CLUSTER" \
-            --services "$SERVICE" \
-            --region "$AWS_REGION"
+          set -euo pipefail
+          START=$(date +%s); SEEN_EVENTS=""; FIRST=1
+          echo "Polling ECS service stability..."
+          while true; do
+            SVC=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
+              --region "$AWS_REGION" --output json \
+              --query 'services[0].{desired:desiredCount,running:runningCount,pending:pendingCount,deployments:deployments,events:events[:10]}')
+            DESIRED=$(echo "$SVC" | jq -r '.desired')
+            RUNNING=$(echo "$SVC" | jq -r '.running')
+            PENDING=$(echo "$SVC" | jq -r '.pending')
+            PRIMARY=$(echo "$SVC" | jq -c '[.deployments[] | select(.status=="PRIMARY")][0]')
+            PRIMARY_RUNNING=$(echo "$PRIMARY" | jq -r '.runningCount // 0')
+            ROLLOUT=$(echo "$PRIMARY" | jq -r '.rolloutState // "UNKNOWN"')
+            ELAPSED=$(( $(date +%s) - START ))
+            printf "[%3ds] desired=%s running=%s pending=%s primary-running=%s rollout=%s\n" \
+              "$ELAPSED" "$DESIRED" "$RUNNING" "$PENDING" "$PRIMARY_RUNNING" "$ROLLOUT"
+            NEW_EVENTS=$(echo "$SVC" | jq -r '.events[] | "\(.createdAt) \(.message)"')
+            while IFS= read -r EVENT; do
+              if [[ -n "$EVENT" && "$SEEN_EVENTS" != *"$EVENT"* ]]; then
+                [[ $FIRST -eq 0 ]] && echo "  event: $EVENT"
+                SEEN_EVENTS="$EVENT"$'\n'"$SEEN_EVENTS"
+              fi
+            done <<< "$NEW_EVENTS"
+            FIRST=0
+            # Exit as soon as the new task is up and serving; old-task drain is background cleanup.
+            if [[ "$PRIMARY_RUNNING" -ge "$DESIRED" && "$PENDING" == "0" ]]; then
+              echo "Service stable after ${ELAPSED}s (new task healthy; old task drains in background)"; break
+            fi
+            if [[ "$ROLLOUT" == "FAILED" ]]; then echo "Deployment FAILED (circuit breaker rolled back)."; exit 1; fi
+            if [[ $ELAPSED -gt 600 ]]; then echo "Timed out after ${ELAPSED}s"; exit 1; fi
+            sleep 10
+          done
