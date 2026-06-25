@@ -1,12 +1,14 @@
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, APIRouter
-from fastapi.responses import HTMLResponse
+import httpx
+from fastapi import FastAPI, APIRouter, Request
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 APP_SLUG = os.environ.get("APP_SLUG", "app")
 APP_ENV = os.environ.get("APP_ENV", "dev")
+POSTGREST_URL = os.environ.get("POSTGREST_URL", "http://localhost:3000")
 PREFIX = f"/{APP_SLUG}-{APP_ENV}"
 ENTRA_CLIENT_ID = os.environ.get("ENTRA_CLIENT_ID", "")
 ENTRA_TENANT_ID = os.environ.get("ENTRA_TENANT_ID", "")
@@ -57,6 +59,33 @@ _SPA_HTML: str = _build_spa_html()
 @router.get("/health")
 def health():
     return {"status": "ok"}
+
+
+_PROXY_SKIP_HEADERS = frozenset({"host", "content-length", "transfer-encoding"})
+
+
+@router.api_route(
+    "/api/{path:path}",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+)
+async def postgrest_proxy(path: str, request: Request) -> Response:
+    """Reverse-proxy /api/* to the PostgREST sidecar (localhost:3000 in ECS)."""
+    headers = {
+        k: v for k, v in request.headers.items() if k.lower() not in _PROXY_SKIP_HEADERS
+    }
+    async with httpx.AsyncClient() as client:
+        upstream = await client.request(
+            method=request.method,
+            url=f"{POSTGREST_URL}/{path}",
+            params=request.query_params,
+            headers=headers,
+            content=await request.body(),
+        )
+    return Response(
+        content=upstream.content,
+        status_code=upstream.status_code,
+        headers=dict(upstream.headers),
+    )
 
 
 # Catch-all: serve the React SPA for every route under the prefix.
