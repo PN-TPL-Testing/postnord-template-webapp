@@ -14,10 +14,25 @@ permissions:
   contents: read
 
 jobs:
+  # EKS apps (Model C): CI already pushed the image to ECR; ArgoCD Image Updater
+  # rolls the running tag forward in-cluster, so the deploy workflow does nothing
+  # here. CI never touches the cluster (docs/eks-migration.md §6.2 / §8). The
+  # {{DEPLOYMENT_BACKEND}} token is substituted to "ecs" or "eks" at provision.
+  deploy-eks:
+    name: EKS — image pushed (ArgoCD Image Updater deploys)
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' && '{{DEPLOYMENT_BACKEND}}' == 'eks' }}
+    steps:
+      - name: No deploy step on EKS
+        run: |
+          echo "EKS (Model C): image pushed to ECR for commit ${{ github.event.workflow_run.head_sha }}."
+          echo "ArgoCD Image Updater detects the new tag and reconciles it in-cluster."
+          echo "CI does not touch the Kubernetes API."
+
   deploy-dev:
     name: Deploy to ECS dev
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && '{{DEPLOYMENT_BACKEND}}' == 'ecs' }}
 
     steps:
       - name: Configure AWS credentials
