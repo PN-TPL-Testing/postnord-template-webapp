@@ -70,7 +70,9 @@ _PROXY_SKIP_HEADERS = frozenset({"host", "content-length", "transfer-encoding"})
 )
 async def postgrest_proxy(path: str, request: Request) -> Response:
     """Reverse-proxy /api/* to the PostgREST sidecar (localhost:3000 in ECS)."""
-    headers = {k: v for k, v in request.headers.items() if k.lower() not in _PROXY_SKIP_HEADERS}
+    headers = {
+        k: v for k, v in request.headers.items() if k.lower() not in _PROXY_SKIP_HEADERS
+    }
     async with httpx.AsyncClient() as client:
         upstream = await client.request(
             method=request.method,
