@@ -8,6 +8,9 @@ on:
       - completed
     branches:
       - main
+  # The portal dispatches this workflow directly (workflow_dispatch) right after
+  # CI succeeds, to skip the variable 30–120s workflow_run processing delay.
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -21,18 +24,18 @@ jobs:
   deploy-eks:
     name: EKS — image pushed (ArgoCD Image Updater deploys)
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' && '{{DEPLOYMENT_BACKEND}}' == 'eks' }}
+    if: ${{ (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') && '{{DEPLOYMENT_BACKEND}}' == 'eks' }}
     steps:
       - name: No deploy step on EKS
         run: |
-          echo "EKS (Model C): image pushed to ECR for commit ${{ github.event.workflow_run.head_sha }}."
+          echo "EKS (Model C): image pushed to ECR for commit ${{ github.event.workflow_run.head_sha || github.sha }}."
           echo "ArgoCD Image Updater detects the new tag and reconciles it in-cluster."
           echo "CI does not touch the Kubernetes API."
 
   deploy-dev:
     name: Deploy to ECS dev
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' && '{{DEPLOYMENT_BACKEND}}' == 'ecs' }}
+    if: ${{ (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') && '{{DEPLOYMENT_BACKEND}}' == 'ecs' }}
 
     steps:
       - name: Configure AWS credentials
@@ -43,7 +46,7 @@ jobs:
 
       - name: Update ECS service with new image
         env:
-          IMAGE_URI: {{ECR_REPO_URI}}:${{ github.event.workflow_run.head_sha }}
+          IMAGE_URI: {{ECR_REPO_URI}}:${{ github.event.workflow_run.head_sha || github.sha }}
           CLUSTER: {{ECS_CLUSTER}}
           SERVICE: {{ECS_SERVICE_DEV}}
           AWS_REGION: {{AWS_REGION}}
